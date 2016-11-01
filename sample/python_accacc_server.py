@@ -107,8 +107,8 @@ if __name__ == "__main__":
 		if command == "q":
 			break
 		if command  == "v":
-			# Android "vib,<sleep_millisec>,<vib_millisec>,<sleep_millisec>,<vib_millisec>,...repeat"
-			# iPhone "vib" 
+			# Android "vib,<sleep_millisec>,<vib_millisec>,<sleep_millisec>,<vib_millisec>,.. ,\n"
+			# iPhone "vib\n" 
 			# iPhone only permit user to vibrate once.
 			server_thread.send("vib,200,500,200,500\n")
 
