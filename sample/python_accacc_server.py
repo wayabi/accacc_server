@@ -69,14 +69,21 @@ class ServerThread(threading.Thread):
 		pon = ["ping", "pon ", "pan "]
 		hz = data[0]
 		power = data[1]
+		# Not used in this sample
+		last_shaken_power = data[2]
+		x_axis_power = data[3]
+		y_axis_power = data[4]
+		z_axis_power = data[5]
+
 		if hz == 0.0:
 			return
 		one_period = 1.0/hz
 		t = time.time()*1000
-		# if elapsed time since last pon
+		# if elapsed time since last "pon"
 		if t - self.time_last_pon > one_period*1000:
-			# stroke power lager then 1.0 m/s^2
+			# stroke power larger than 1.0 m/s^2
 			if power > 1.0:
+				# update last "pon" time
 				self.time_last_pon = t - (t-self.time_last_pon-one_period*1000)
 				index_pon = self.count_pon%len(pon)
 				print("%s:%d" % (pon[index_pon], self.count_pon))
@@ -104,9 +111,9 @@ if __name__ == "__main__":
 	while True:
 		data = raw_input()
 		command =  data.strip()
-		if command == "q":
+		if command == "q" or command == "quit":
 			break
-		if command  == "v":
+		if command  == "v" or command == "vib":
 			# Android "vib,<sleep_millisec>,<vib_millisec>,<sleep_millisec>,<vib_millisec>,.. ,\n"
 			# iPhone "vib\n" 
 			# iPhone only permit user to vibrate once.
