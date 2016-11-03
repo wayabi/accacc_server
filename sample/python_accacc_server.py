@@ -6,6 +6,7 @@ import struct
 import datetime
 import time
 import threading
+import os
 
 class ServerThread(threading.Thread):
 	def __init__(self, host, port):
@@ -22,13 +23,13 @@ class ServerThread(threading.Thread):
 
 	def get_data(self, conn):
 		size_float = 4
-		size_data = 6 * size_float
+		size_data = 7 * size_float
 		data = ()
 		d = conn.recv(size_data)
 		if len(d) < size_data:
 			return ()
-		# 24byte binary -> bigendian(float, float, float, float, float, float)
-		data = struct.unpack(">6f", d)
+		# 28byte binary -> bigendian(float, float, float, float, float, float, float)
+		data = struct.unpack(">7f", d)
 		return  data
 
 	def run(self):
@@ -69,12 +70,12 @@ class ServerThread(threading.Thread):
 		pon = ["ping", "pon ", "pan "]
 		hz = data[0]
 		power = data[1]
-		# Not used in this sample
 		last_shaken_power = data[2]
+		# Not used in this sample
 		x_axis_power = data[3]
 		y_axis_power = data[4]
 		z_axis_power = data[5]
-
+		reserved = data[6] # Reserved data 4Byte. Not use this version
 		if hz == 0.0:
 			return
 		one_period = 1.0/hz
@@ -82,13 +83,15 @@ class ServerThread(threading.Thread):
 		# if elapsed time since last "pon"
 		if t - self.time_last_pon > one_period*1000:
 			# stroke power larger than 1.0 m/s^2
-			if power > 1.0:
+			# and check last_shaken_power to stop immediatly shaking stop
+			if power > 1.0 and last_shaken_power > 1.0:
 				# update last "pon" time
-				self.time_last_pon = t - (t-self.time_last_pon-one_period*1000)
+				int_n = (int)((t-self.time_last_pon)/(one_period*1000))
+				self.time_last_pon = t - (t-self.time_last_pon-one_period*1000*int_n)
 				index_pon = self.count_pon%len(pon)
-				print("%s:%d" % (pon[index_pon], self.count_pon))
+				print("%s:%5d,%f" % (pon[index_pon], self.count_pon, hz))
 				if index_pon == 2:
-					# vibrate 200millisec immediately
+					# vibrate 200millisec immediately once every three times
 					self.send("vib,0,200\n")
 				self.count_pon = self.count_pon + 1
 
@@ -102,7 +105,7 @@ class ServerThread(threading.Thread):
 # input "q" to quit, "v" to phone vibration.
 if __name__ == "__main__":
 	# set host and port
-	host = "127.0.0.1"
+	host = "192.168.11.6"
 	port = 12345
 
 	server_thread = ServerThread(host, port)
@@ -115,7 +118,7 @@ if __name__ == "__main__":
 			break
 		if command  == "v" or command == "vib":
 			# Android "vib,<sleep_millisec>,<vib_millisec>,<sleep_millisec>,<vib_millisec>,.. ,\n"
-			# iPhone "vib\n" 
+			# iPhone "vib.*\n" 
 			# iPhone only permit user to vibrate once.
 			server_thread.send("vib,200,500,200,500\n")
 
